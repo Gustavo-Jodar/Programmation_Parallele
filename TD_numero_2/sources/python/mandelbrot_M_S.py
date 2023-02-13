@@ -50,45 +50,53 @@ class MandelbrotSet:
                 return iter
         return self.max_iterations
 
-
 # On peut changer les paramètres des deux prochaines lignes
 mandelbrot_set = MandelbrotSet(max_iterations=50,escape_radius=10)
-width, height = 1024, 1024
+width, height = 4, 4
+convergence = np.empty((width,height),dtype=np.double)
 
 scaleX = 3./width
 scaleY = 2.25/height
-convergence = np.empty((width,height),dtype=np.double)
-data = []
+ys = None
+conv_aux = np.array([])
 
 if(rank == 0):
-    for i in range(0, size):
-        data.append(convergence[:, i*int(height/size):(i+1)*int(height/size)])
-
-data = comm.scatter(data, root=0)
-
-# Calcul de l'ensemble de mandelbrot :
-offset = int(height/size)*rank
-deb = time()
-for y in range(offset, int(height/size)*(rank+1)):
-    for x in range(width):
-        c = complex(-2. + scaleX*x, -1.125 + scaleY * y)
-        data[x,y - offset] = mandelbrot_set.convergence(c,smooth=True) #mudar onde ele recebe [x,y]
-
-fin = time()
-print(f"Temps du calcul de l'ensemble de Mandelbrot : {fin-deb}")
-
-deb = time()
-newData = comm.gather(data,root=0)
-
-if(rank == 0):
-    img = []
-    for i in range(0, size):
-        img = img + newData[i].T.tolist()
+    #assigning tashes
+    ys = 0
+    for i in range(1, size):
+        comm.send(ys, dest=i, tag=ys)
+        ys = ys + 1
     
-    img = np.array(img)    
-    image = Image.fromarray(np.uint8(matplotlib.cm.plasma(img)*255))
+    
+    while(ys != height):
+        stat = MPI.Status()
+        conv_aux = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=stat)
+        convergence[stat.Get_tag()] = conv_aux
+        comm.send(ys, stat.Get_source(), ys)
+        ys = ys + 1
+    '''
+        # Constitution de l'image résultante :
+        deb=time()
+        image = Image.fromarray(np.uint8(matplotlib.cm.plasma(convergence.T)*255))
+        fin = time()
+        print(f"Temps de constitution de l'image : {fin-deb}")
+        image.show()
+    '''
 
-    fin = time()
-    print(f"Temps de constitution de l'image : {fin-deb}")
-    image.show()
+else:
+    
+    convergence = np.empty((width,1),dtype=np.double)
+    conv_aux = 0
+    stat = MPI.Status()
+    ys = comm.recv(ys, source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=stat)
+    print(ys)
+    comm.send(ys+1, 0, ys)
+    '''
+    # Calcul de l'ensemble de mandelbrot :
+    for x in range(width):
+        c = complex(-2. + scaleX*x, -1.125 + scaleY * ys)
+        convergence[x] = mandelbrot_set.convergence(c,smooth=True)
+    
+    comm.send(convergence.tolist(), 0, ys)
+    '''
     

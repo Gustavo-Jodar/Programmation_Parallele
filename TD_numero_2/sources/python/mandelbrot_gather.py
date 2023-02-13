@@ -58,37 +58,44 @@ width, height = 1024, 1024
 scaleX = 3./width
 scaleY = 2.25/height
 convergence = np.empty((width,height),dtype=np.double)
-data = []
 
-if(rank == 0):
-    for i in range(0, size):
-        data.append(convergence[:, i*int(height/size):(i+1)*int(height/size)])
+calculer = []
+for tests in range(10):
+    convergence = np.empty((width,height),dtype=np.double)
+    data = []
 
-data = comm.scatter(data, root=0)
+    deb = time()
 
-# Calcul de l'ensemble de mandelbrot :
-offset = int(height/size)*rank
-deb = time()
-for y in range(offset, int(height/size)*(rank+1)):
-    for x in range(width):
-        c = complex(-2. + scaleX*x, -1.125 + scaleY * y)
-        data[x,y - offset] = mandelbrot_set.convergence(c,smooth=True) #mudar onde ele recebe [x,y]
+    if(rank == 0):
+        for i in range(0, size):
+            data.append(convergence[:, i*int(height/size):(i+1)*int(height/size)])
 
-fin = time()
-print(f"Temps du calcul de l'ensemble de Mandelbrot : {fin-deb}")
+    data = comm.scatter(data, root=0)
 
-deb = time()
-newData = comm.gather(data,root=0)
-
-if(rank == 0):
-    img = []
-    for i in range(0, size):
-        img = img + newData[i].T.tolist()
+    # Calcul de l'ensemble de mandelbrot :
+    offset = int(height/size)*rank
     
-    img = np.array(img)    
-    image = Image.fromarray(np.uint8(matplotlib.cm.plasma(img)*255))
+    for y in range(offset, int(height/size)*(rank+1)):
+        for x in range(width):
+            c = complex(-2. + scaleX*x, -1.125 + scaleY * y)
+            data[x,y - offset] = mandelbrot_set.convergence(c,smooth=True) #mudar onde ele recebe [x,y]
 
-    fin = time()
-    print(f"Temps de constitution de l'image : {fin-deb}")
-    image.show()
+    #print(f"Temps du calcul de l'ensemble de Mandelbrot : {fin-deb}")
     
+    newData = comm.gather(data,root=0)
+
+    if(rank == 0):
+        img = []
+        for i in range(0, size):
+            img = img + newData[i].T.tolist()
+        
+        img = np.array(img)    
+        image = Image.fromarray(np.uint8(matplotlib.cm.plasma(img)*255))
+
+        fin = time()
+        calculer.append(fin-deb)
+        
+        print(f"Temps de constitution de l'image : {fin-deb}")
+        #image.show()
+
+        print(np.array(calculer).mean())
