@@ -179,11 +179,15 @@ int main(int nargs, char *argv[])
                 if (event.type == sf::Event::Resized)
                     myScreen.resize(event);
                 // event play animation
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::P)){
                     key = 'P';
+                    animate = true;
+                }
                 // event stop animation
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
                     key = 'S';
+                    animate = false;
+                }
                 // event +speed animation
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
                 {
@@ -218,47 +222,50 @@ int main(int nargs, char *argv[])
                     }
                 }
             }
+            if(animate){
+                
+                key = 'N';
+                for(int i = 1; i < nb_process; i++){
+                    MPI_Send(&key, 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+                }
+                // receiving calculated data
 
-            key = 'N';
-            for(int i = 1; i < nb_process; i++){
-                MPI_Send(&key, 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+                MPI_Gatherv(cloud.data(), 2* partial_cloud_size, MPI_DOUBLE, cloud.data(), recv_counts, dspls, MPI_DOUBLE, 0 , MPI_COMM_WORLD);
+                
+                MPI_Recv(grid.data(), 2 * grid.get_size_velocity_field(), MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &status);
+                MPI_Recv(vortices.data(), vortices.numberOfVortices() * 3, MPI_DOUBLE, 1, 3, MPI_COMM_WORLD, &status);
+                        
+                frames++;
+
+                // updating screen
+                myScreen.clear(sf::Color::Black);
+
+                std::string strDt = std::string("Time step : ") + std::to_string(dt);
+                myScreen.drawText(strDt, Geometry::Point<double>{50, double(myScreen.getGeometry().second - 96)});
+                auto start_af = std::chrono::system_clock::now();
+                
+                myScreen.displayVelocityField(grid, vortices);
+                auto end_af = std::chrono::system_clock::now();
+                std::chrono::duration<double> diff_af = end_af - start_af;
+                //std::cout << "aff = " << diff_af.count() << std::endl;
+                
+                myScreen.displayParticles(grid, vortices, cloud);
+
+                auto end = std::chrono::system_clock::now();
+                std::chrono::duration<double> diff = end - start;
+                if (diff.count() >= 1.0)
+                {
+                    fps = frames;
+                    start = end;
+                    frames = 0;
+                }
+                std::string str_fps = std::string("FPS : ") + std::to_string(fps);
+                myScreen.drawText(str_fps, Geometry::Point<double>{300, double(myScreen.getGeometry().second - 96)});
+                
+                myScreen.display();
+                
+                
             }
-            // receiving calculated data
-
-            MPI_Gatherv(cloud.data(), 2* partial_cloud_size, MPI_DOUBLE, cloud.data(), recv_counts, dspls, MPI_DOUBLE, 0 , MPI_COMM_WORLD);
-            
-            MPI_Recv(grid.data(), 2 * grid.get_size_velocity_field(), MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, &status);
-            MPI_Recv(vortices.data(), vortices.numberOfVortices() * 3, MPI_DOUBLE, 1, 3, MPI_COMM_WORLD, &status);
-                    
-            frames++;
-
-            // updating screen
-            myScreen.clear(sf::Color::Black);
-
-            std::string strDt = std::string("Time step : ") + std::to_string(dt);
-            myScreen.drawText(strDt, Geometry::Point<double>{50, double(myScreen.getGeometry().second - 96)});
-            auto start_af = std::chrono::system_clock::now();
-            
-            myScreen.displayVelocityField(grid, vortices);
-            auto end_af = std::chrono::system_clock::now();
-            std::chrono::duration<double> diff_af = end_af - start_af;
-            //std::cout << "aff = " << diff_af.count() << std::endl;
-            
-            myScreen.displayParticles(grid, vortices, cloud);
-
-            auto end = std::chrono::system_clock::now();
-            std::chrono::duration<double> diff = end - start;
-            if (diff.count() >= 1.0)
-            {
-                fps = frames;
-                start = end;
-                frames = 0;
-            }
-            std::string str_fps = std::string("FPS : ") + std::to_string(fps);
-            myScreen.drawText(str_fps, Geometry::Point<double>{300, double(myScreen.getGeometry().second - 96)});
-            
-            myScreen.display();
-            
             
         }
     }
