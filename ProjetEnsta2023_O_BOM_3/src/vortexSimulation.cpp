@@ -130,7 +130,7 @@ int main(int nargs, char *argv[])
 
     grid.updateVelocityField(vortices);
 
-    bool animate = true;
+    bool animate = true, next_frame = false;
 
     double dt = 0.1; // velocity
 
@@ -201,8 +201,10 @@ int main(int nargs, char *argv[])
                     dt /= 2;
                 }
                 // event advance
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)){
                     key = 'R';
+                    next_frame = true;
+                }
                 // event close window and terminate other processes
                 if (event.type == sf::Event::Closed)
                     key = 'T';
@@ -222,8 +224,8 @@ int main(int nargs, char *argv[])
                     }
                 }
             }
-            if(animate){
-                
+            if(animate || next_frame){
+                next_frame = false;
                 key = 'N';
                 for(int i = 1; i < nb_process; i++){
                     MPI_Send(&key, 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
@@ -314,8 +316,6 @@ int main(int nargs, char *argv[])
             default:
                 break;
             }
-
-            
             if(calculate){
                 if (animate | advance)
                 {
