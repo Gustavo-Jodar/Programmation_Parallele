@@ -40,7 +40,6 @@ Numeric::solve_RK4_fixed_vortices( double dt, CartesianGridOfSpeed const& t_velo
     std::chrono::duration<double> diff_c = end_c - start_c;
     //std::cout << "first_boucle = " << diff_c.count() << std::endl;
         
-     
     return newCloud;
 }
 
@@ -81,6 +80,7 @@ Numeric::solve_RK4_movable_vortices( double dt, CartesianGridOfSpeed& t_velocity
     newVortexCenter.reserve(t_vortices.numberOfVortices());
     
     auto start_2 = std::chrono::system_clock::now();
+
     for (std::size_t iVortex=0; iVortex<t_vortices.numberOfVortices(); ++iVortex)
     {
         point p = t_vortices.getCenter(iVortex);
@@ -101,7 +101,7 @@ Numeric::solve_RK4_movable_vortices( double dt, CartesianGridOfSpeed& t_velocity
     //std::cout << "2_boucle = " << diff_2.count() << std::endl;
     
     auto start_3 = std::chrono::system_clock::now();
-    
+
     for (std::size_t iVortex=0; iVortex<t_vortices.numberOfVortices(); ++iVortex)
     {
         t_vortices.setVortex(iVortex, newVortexCenter[iVortex], 

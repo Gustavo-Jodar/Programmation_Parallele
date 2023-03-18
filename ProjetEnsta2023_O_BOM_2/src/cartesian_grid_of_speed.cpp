@@ -1,5 +1,6 @@
 #include <cassert>
 #include <iostream>
+#include <chrono>
 #include "cartesian_grid_of_speed.hpp"
 using namespace Numeric;
 
@@ -19,6 +20,9 @@ CartesianGridOfSpeed::updateVelocityField( Simulation::Vortices const& t_vortice
 {
     using point=Simulation::Vortices::point;
     double halfStep = 0.5*m_step;
+    auto start_4 = std::chrono::system_clock::now();
+
+    //#pragma omp parallel for
     for ( std::size_t iRow=0; iRow<m_height; ++iRow )
     {
         double yP = m_bottom + iRow*m_step + halfStep;
@@ -30,6 +34,10 @@ CartesianGridOfSpeed::updateVelocityField( Simulation::Vortices const& t_vortice
             m_velocityField[index] = t_vortices.computeSpeed(p);
         }
     }
+    auto end_4 = std::chrono::system_clock::now();
+    std::chrono::duration<double> diff_4 = end_4 - start_4;
+    //std::cout << "4_boucle = " << diff_4.count() << std::endl;
+
 }
 
 auto 
