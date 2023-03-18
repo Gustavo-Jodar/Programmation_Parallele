@@ -20,7 +20,7 @@ Numeric::solve_RK4_fixed_vortices( double dt, CartesianGridOfSpeed const& t_velo
     // On ne bouge que les points :
 
     auto start_c = std::chrono::system_clock::now();
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for ( std::size_t iPoint=0; iPoint<t_points.numberOfPoints(); ++iPoint)
     {
         point  p = t_points[iPoint];
@@ -57,7 +57,7 @@ Numeric::solve_RK4_movable_vortices( double dt, CartesianGridOfSpeed& t_velocity
     // On ne bouge que les points :
     
     auto start = std::chrono::system_clock::now();
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for ( std::size_t iPoint=0; iPoint<t_points.numberOfPoints(); ++iPoint)
     {
         point  p = t_points[iPoint];
@@ -76,7 +76,21 @@ Numeric::solve_RK4_movable_vortices( double dt, CartesianGridOfSpeed& t_velocity
     auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = end - start;
     //std::cout << "1_boucle = " << diff.count() << std::endl;
-    
+
+    return newCloud;
+}
+
+//vortex function nest pas parallelizable
+
+
+void Numeric::update_vortices( double dt, CartesianGridOfSpeed& t_velocity, 
+                                     Simulation::Vortices& t_vortices, 
+                                     Geometry::CloudOfPoints const& t_points )
+    {
+    constexpr double onesixth = 1./6.;
+    using vector = Simulation::Vortices::vector;
+    using point  = Simulation::Vortices::point;
+
     std::vector<point> newVortexCenter;
     newVortexCenter.reserve(t_vortices.numberOfVortices());
     
@@ -112,6 +126,4 @@ Numeric::solve_RK4_movable_vortices( double dt, CartesianGridOfSpeed& t_velocity
     //std::cout << "3_boucle = " << diff_3.count() << std::endl;
 
     t_velocity.updateVelocityField(t_vortices);
-    return newCloud;
-
 }
